@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, QrCode, Scan } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAttendance } from "@/context/AttendanceContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import QRCodeScanner from "@/components/attendance/QRCodeScanner";
+import QRCodeGenerator from "@/components/attendance/QRCodeGenerator";
+import FaceScanner from "@/components/attendance/FaceScanner";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const Attendance = () => {
   const { groups, currentGroupId, setCurrentGroup, markAttendance } = useAttendance();
@@ -21,6 +25,7 @@ const Attendance = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<string>("mark");
+  const [activeModal, setActiveModal] = useState<"qr-scanner" | "qr-generator" | "face-scanner" | null>(null);
   const navigate = useNavigate();
 
   // Format date as "YYYY-MM-DD" for storage
@@ -131,7 +136,8 @@ const Attendance = () => {
           id: member.id,
           name: member.name,
           status: attendanceRecord?.status || null,
-          notes: attendanceRecord?.notes || ""
+          notes: attendanceRecord?.notes || "",
+          method: attendanceRecord?.method || "manual"
         };
       })
       .filter(record => record.status !== null);
@@ -225,6 +231,36 @@ const Attendance = () => {
             </TabsList>
             
             <TabsContent value="mark">
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setActiveModal("qr-scanner")}
+                  className="flex items-center"
+                >
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Scan QR Code
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setActiveModal("qr-generator")}
+                  className="flex items-center"
+                >
+                  <QrCode className="mr-2 h-4 w-4" />
+                  Generate QR Code
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setActiveModal("face-scanner")}
+                  className="flex items-center"
+                >
+                  <Scan className="mr-2 h-4 w-4" />
+                  Face Recognition
+                </Button>
+              </div>
+              
               {members.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <p>No members in this group yet.</p>
@@ -318,6 +354,7 @@ const Attendance = () => {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Method</TableHead>
                         <TableHead>Notes</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -336,6 +373,9 @@ const Attendance = () => {
                               <span className="ml-1 capitalize">{record.status}</span>
                             </div>
                           </TableCell>
+                          <TableCell>
+                            <span className="capitalize">{record.method || 'manual'}</span>
+                          </TableCell>
                           <TableCell className="max-w-[300px]">
                             {record.notes || "-"}
                           </TableCell>
@@ -349,6 +389,27 @@ const Attendance = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* QR Code Scanner Modal */}
+      <Dialog open={activeModal === "qr-scanner"} onOpenChange={(open) => !open && setActiveModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <QRCodeScanner onClose={() => setActiveModal(null)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Code Generator Modal */}
+      <Dialog open={activeModal === "qr-generator"} onOpenChange={(open) => !open && setActiveModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <QRCodeGenerator onClose={() => setActiveModal(null)} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Face Scanner Modal */}
+      <Dialog open={activeModal === "face-scanner"} onOpenChange={(open) => !open && setActiveModal(null)}>
+        <DialogContent className="sm:max-w-md">
+          <FaceScanner onClose={() => setActiveModal(null)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

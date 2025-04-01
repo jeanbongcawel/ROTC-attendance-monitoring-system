@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -12,6 +13,8 @@ export type AttendanceStatus = "present" | "absent" | "late";
 export interface AttendanceRecord {
   status: AttendanceStatus;
   timestamp: string;
+  notes?: string;
+  method?: "manual" | "qr" | "face";
 }
 
 export interface Member {
@@ -47,6 +50,7 @@ interface AttendanceContextType {
   groups: GroupsData;
   currentGroupId: string | null;
   setCurrentGroupId: (id: string | null) => void;
+  setCurrentGroup: (id: string | null) => void; // Alias for setCurrentGroupId
   addGroup: (group: Group) => void;
   updateGroup: (id: string, groupData: Partial<Group>) => void;
   deleteGroup: (id: string) => void;
@@ -63,8 +67,17 @@ interface AttendanceContextType {
     date: string,
     status: AttendanceStatus
   ) => void;
-  user: User | null; // Add user to the context
-  setUser: (user: User | null) => void; // Add setUser to the context
+  markAttendance: (
+    groupId: string,
+    memberId: string,
+    date: string,
+    status: AttendanceStatus,
+    notes?: string,
+    method?: "manual" | "qr" | "face"
+  ) => void; // Alias for extended recordAttendance
+  clearAttendanceData: () => void;
+  user: User | null;
+  setUser: (user: User | null) => void;
 }
 
 // Create context
@@ -89,6 +102,9 @@ export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     localStorage.setItem("rotc_attendance_groups", JSON.stringify(groups));
   }, [groups]);
+
+  // Alias for setCurrentGroupId to maintain backward compatibility
+  const setCurrentGroup = setCurrentGroupId;
 
   const addGroup = (group: Group) => {
     setGroups((prevGroups) => ({ ...prevGroups, [group.id]: group }));
@@ -197,6 +213,48 @@ export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({
     });
   };
 
+  // Enhanced attendance marking function that includes notes and method
+  const markAttendance = (
+    groupId: string,
+    memberId: string,
+    date: string,
+    status: AttendanceStatus,
+    notes?: string,
+    method: "manual" | "qr" | "face" = "manual"
+  ) => {
+    setGroups((prevGroups) => {
+      const group = prevGroups[groupId];
+      if (group && group.members[memberId]) {
+        return {
+          ...prevGroups,
+          [groupId]: {
+            ...group,
+            members: {
+              ...group.members,
+              [memberId]: {
+                ...group.members[memberId],
+                attendance: {
+                  ...group.members[memberId].attendance,
+                  [date]: { 
+                    status, 
+                    timestamp: new Date().toISOString(),
+                    notes,
+                    method
+                  },
+                },
+              },
+            },
+          },
+        };
+      }
+      return prevGroups;
+    });
+  };
+
+  const clearAttendanceData = () => {
+    setGroups({});
+  };
+
   // Add user state
   const [user, setUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem("rotc_user");
@@ -218,6 +276,7 @@ export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({
         groups,
         currentGroupId,
         setCurrentGroupId,
+        setCurrentGroup,
         addGroup,
         updateGroup,
         deleteGroup,
@@ -225,6 +284,8 @@ export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({
         updateMember,
         deleteMember,
         recordAttendance,
+        markAttendance,
+        clearAttendanceData,
         user,
         setUser,
       }}
