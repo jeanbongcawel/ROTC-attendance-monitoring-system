@@ -55,7 +55,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ open }) => {
 
         <div className="pt-4 mt-auto border-t border-sidebar-border">
           <p className="text-sidebar-foreground/80 text-xs text-center">
-            Unity Tracker v1.0
+            ROTC Attendance Monitoring System v1.0
           </p>
         </div>
       </div>

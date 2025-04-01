@@ -28,7 +28,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </Button>
-          <h1 className="text-xl font-bold">Unity Tracker</h1>
+          <h1 className="text-xl font-bold">ROTC Attendance Monitoring System</h1>
         </div>
       </header>
       

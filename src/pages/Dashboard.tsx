@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAttendance } from "@/context/AttendanceContext";
@@ -158,8 +157,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-sm">{stats.latePercentage}%</div>
                   </div>
-                  <Progress value={stats.latePercentage} className="h-2 bg-muted" 
-                    indicatorClassName="bg-amber-500" />
+                  <Progress value={stats.latePercentage} className="h-2 bg-muted" />
                 </div>
                 
                 <div className="space-y-2">
@@ -170,8 +168,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-sm">{stats.absentPercentage}%</div>
                   </div>
-                  <Progress value={stats.absentPercentage} className="h-2 bg-muted"
-                    indicatorClassName="bg-red-500" />
+                  <Progress value={stats.absentPercentage} className="h-2 bg-muted" />
                 </div>
               </>
             )}
