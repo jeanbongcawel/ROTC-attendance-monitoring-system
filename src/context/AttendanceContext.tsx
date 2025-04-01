@@ -1,251 +1,245 @@
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useContext,
+  ReactNode,
+} from "react";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+// Define types
+export type AttendanceStatus = "present" | "absent" | "late";
 
-// Define types for our data structures
-export type Attendance = {
-  id: string;
-  date: string;
-  status: "present" | "absent" | "late";
-  notes?: string;
-};
+export interface AttendanceRecord {
+  status: AttendanceStatus;
+  timestamp: string;
+}
 
-export type Member = {
-  id: string;
-  name: string;
-  email: string;
-  attendance: Record<string, Attendance>;
-};
-
-export type Group = {
+export interface Member {
   id: string;
   name: string;
-  description?: string;
-  members: Record<string, Member>;
-};
+  attendance: {
+    [date: string]: AttendanceRecord;
+  };
+}
 
-type AttendanceContextType = {
-  groups: Record<string, Group>;
+export interface Group {
+  id: string;
+  name: string;
+  description: string;
+  members: {
+    [memberId: string]: Member;
+  };
+}
+
+export interface GroupsData {
+  [groupId: string]: Group;
+}
+
+type UserRole = "admin" | "commander" | "cadet";
+
+interface User {
+  id: string;
+  name: string;
+  role: UserRole;
+}
+
+interface AttendanceContextType {
+  groups: GroupsData;
   currentGroupId: string | null;
-  addGroup: (name: string, description?: string) => void;
-  updateGroup: (id: string, name: string, description?: string) => void;
+  setCurrentGroupId: (id: string | null) => void;
+  addGroup: (group: Group) => void;
+  updateGroup: (id: string, groupData: Partial<Group>) => void;
   deleteGroup: (id: string) => void;
-  setCurrentGroup: (id: string | null) => void;
-  addMember: (groupId: string, name: string, email: string) => void;
-  updateMember: (groupId: string, memberId: string, name: string, email: string) => void;
+  addMember: (groupId: string, member: Member) => void;
+  updateMember: (
+    groupId: string,
+    memberId: string,
+    memberData: Partial<Member>
+  ) => void;
   deleteMember: (groupId: string, memberId: string) => void;
-  markAttendance: (groupId: string, memberId: string, date: string, status: "present" | "absent" | "late", notes?: string) => void;
-  clearAttendanceData: () => void;
-};
+  recordAttendance: (
+    groupId: string,
+    memberId: string,
+    date: string,
+    status: AttendanceStatus
+  ) => void;
+  user: User | null; // Add user to the context
+  setUser: (user: User | null) => void; // Add setUser to the context
+}
 
-const AttendanceContext = createContext<AttendanceContextType | undefined>(undefined);
+// Create context
+const AttendanceContext = createContext<AttendanceContextType | undefined>(
+  undefined
+);
 
-export const useAttendance = () => {
-  const context = useContext(AttendanceContext);
-  if (context === undefined) {
-    throw new Error("useAttendance must be used within an AttendanceProvider");
-  }
-  return context;
-};
-
-// Generate a simple unique ID
-const generateId = () => Math.random().toString(36).substring(2, 9);
-
-export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [groups, setGroups] = useState<Record<string, Group>>({});
+export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const [groups, setGroups] = useState<GroupsData>(() => {
+    try {
+      const storedGroups = localStorage.getItem("rotc_attendance_groups");
+      return storedGroups ? JSON.parse(storedGroups) : {};
+    } catch (error) {
+      console.error("Error parsing stored groups from localStorage", error);
+      return {};
+    }
+  });
   const [currentGroupId, setCurrentGroupId] = useState<string | null>(null);
 
-  // Load data from localStorage on component mount
   useEffect(() => {
-    const savedGroups = localStorage.getItem("attendanceGroups");
-    const savedCurrentGroup = localStorage.getItem("currentGroupId");
-    
-    if (savedGroups) {
-      setGroups(JSON.parse(savedGroups));
-    }
-    
-    if (savedCurrentGroup) {
-      setCurrentGroupId(savedCurrentGroup);
-    }
-  }, []);
-
-  // Save data to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem("attendanceGroups", JSON.stringify(groups));
+    localStorage.setItem("rotc_attendance_groups", JSON.stringify(groups));
   }, [groups]);
 
-  useEffect(() => {
-    if (currentGroupId) {
-      localStorage.setItem("currentGroupId", currentGroupId);
-    } else {
-      localStorage.removeItem("currentGroupId");
-    }
-  }, [currentGroupId]);
+  const addGroup = (group: Group) => {
+    setGroups((prevGroups) => ({ ...prevGroups, [group.id]: group }));
+  };
 
-  // Add a new group
-  const addGroup = (name: string, description?: string) => {
-    const id = generateId();
-    setGroups(prev => ({
-      ...prev,
-      [id]: {
-        id,
-        name,
-        description,
-        members: {}
+  const updateGroup = (id: string, groupData: Partial<Group>) => {
+    setGroups((prevGroups) => {
+      if (prevGroups[id]) {
+        return {
+          ...prevGroups,
+          [id]: { ...prevGroups[id], ...groupData },
+        };
       }
-    }));
-    if (!currentGroupId) {
-      setCurrentGroupId(id);
-    }
-  };
-
-  // Update an existing group
-  const updateGroup = (id: string, name: string, description?: string) => {
-    setGroups(prev => {
-      if (!prev[id]) return prev;
-      return {
-        ...prev,
-        [id]: {
-          ...prev[id],
-          name,
-          description
-        }
-      };
+      return prevGroups;
     });
   };
 
-  // Delete a group
   const deleteGroup = (id: string) => {
-    setGroups(prev => {
-      const newGroups = { ...prev };
-      delete newGroups[id];
-      return newGroups;
-    });
-
-    if (currentGroupId === id) {
-      const remainingGroups = Object.keys(groups).filter(groupId => groupId !== id);
-      setCurrentGroupId(remainingGroups.length > 0 ? remainingGroups[0] : null);
-    }
-  };
-
-  // Set current group
-  const setCurrentGroup = (id: string | null) => {
-    setCurrentGroupId(id);
-  };
-
-  // Add a new member to a group
-  const addMember = (groupId: string, name: string, email: string) => {
-    setGroups(prev => {
-      if (!prev[groupId]) return prev;
-      const id = generateId();
-      return {
-        ...prev,
-        [groupId]: {
-          ...prev[groupId],
-          members: {
-            ...prev[groupId].members,
-            [id]: {
-              id,
-              name,
-              email,
-              attendance: {}
-            }
-          }
-        }
-      };
+    setGroups((prevGroups) => {
+      const { [id]: deletedGroup, ...remainingGroups } = prevGroups;
+      return remainingGroups;
     });
   };
 
-  // Update an existing member
-  const updateMember = (groupId: string, memberId: string, name: string, email: string) => {
-    setGroups(prev => {
-      if (!prev[groupId] || !prev[groupId].members[memberId]) return prev;
-      return {
-        ...prev,
-        [groupId]: {
-          ...prev[groupId],
-          members: {
-            ...prev[groupId].members,
-            [memberId]: {
-              ...prev[groupId].members[memberId],
-              name,
-              email
-            }
-          }
-        }
-      };
+  const addMember = (groupId: string, member: Member) => {
+    setGroups((prevGroups) => {
+      const group = prevGroups[groupId];
+      if (group) {
+        return {
+          ...prevGroups,
+          [groupId]: {
+            ...group,
+            members: { ...group.members, [member.id]: member },
+          },
+        };
+      }
+      return prevGroups;
     });
   };
 
-  // Delete a member from a group
+  const updateMember = (
+    groupId: string,
+    memberId: string,
+    memberData: Partial<Member>
+  ) => {
+    setGroups((prevGroups) => {
+      const group = prevGroups[groupId];
+      if (group && group.members[memberId]) {
+        return {
+          ...prevGroups,
+          [groupId]: {
+            ...group,
+            members: {
+              ...group.members,
+              [memberId]: { ...group.members[memberId], ...memberData },
+            },
+          },
+        };
+      }
+      return prevGroups;
+    });
+  };
+
   const deleteMember = (groupId: string, memberId: string) => {
-    setGroups(prev => {
-      if (!prev[groupId]) return prev;
-      const newMembers = { ...prev[groupId].members };
-      delete newMembers[memberId];
-      return {
-        ...prev,
-        [groupId]: {
-          ...prev[groupId],
-          members: newMembers
-        }
-      };
+    setGroups((prevGroups) => {
+      const group = prevGroups[groupId];
+      if (group && group.members[memberId]) {
+        const { [memberId]: deletedMember, ...remainingMembers } =
+          group.members;
+        return {
+          ...prevGroups,
+          [groupId]: { ...group, members: remainingMembers },
+        };
+      }
+      return prevGroups;
     });
   };
 
-  // Mark attendance for a member
-  const markAttendance = (groupId: string, memberId: string, date: string, status: "present" | "absent" | "late", notes?: string) => {
-    setGroups(prev => {
-      if (!prev[groupId] || !prev[groupId].members[memberId]) return prev;
-      
-      return {
-        ...prev,
-        [groupId]: {
-          ...prev[groupId],
-          members: {
-            ...prev[groupId].members,
-            [memberId]: {
-              ...prev[groupId].members[memberId],
-              attendance: {
-                ...prev[groupId].members[memberId].attendance,
-                [date]: {
-                  id: generateId(),
-                  date,
-                  status,
-                  notes
-                }
-              }
-            }
-          }
-        }
-      };
+  const recordAttendance = (
+    groupId: string,
+    memberId: string,
+    date: string,
+    status: AttendanceStatus
+  ) => {
+    setGroups((prevGroups) => {
+      const group = prevGroups[groupId];
+      if (group && group.members[memberId]) {
+        return {
+          ...prevGroups,
+          [groupId]: {
+            ...group,
+            members: {
+              ...group.members,
+              [memberId]: {
+                ...group.members[memberId],
+                attendance: {
+                  ...group.members[memberId].attendance,
+                  [date]: { status, timestamp: new Date().toISOString() },
+                },
+              },
+            },
+          },
+        };
+      }
+      return prevGroups;
     });
   };
 
-  // Clear all attendance data
-  const clearAttendanceData = () => {
-    setGroups({});
-    setCurrentGroupId(null);
-    localStorage.removeItem("attendanceGroups");
-    localStorage.removeItem("currentGroupId");
-  };
+  // Add user state
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem("rotc_user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
-  const contextValue: AttendanceContextType = {
-    groups,
-    currentGroupId,
-    addGroup,
-    updateGroup,
-    deleteGroup,
-    setCurrentGroup,
-    addMember,
-    updateMember,
-    deleteMember,
-    markAttendance,
-    clearAttendanceData
-  };
+  // Add effect to save user to localStorage
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem("rotc_user", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("rotc_user");
+    }
+  }, [user]);
 
   return (
-    <AttendanceContext.Provider value={contextValue}>
+    <AttendanceContext.Provider
+      value={{
+        groups,
+        currentGroupId,
+        setCurrentGroupId,
+        addGroup,
+        updateGroup,
+        deleteGroup,
+        addMember,
+        updateMember,
+        deleteMember,
+        recordAttendance,
+        user,
+        setUser,
+      }}
+    >
       {children}
     </AttendanceContext.Provider>
   );
+};
+
+export const useAttendance = (): AttendanceContextType => {
+  const context = useContext(AttendanceContext);
+  if (!context) {
+    throw new Error(
+      "useAttendance must be used within an AttendanceProvider"
+    );
+  }
+  return context;
 };

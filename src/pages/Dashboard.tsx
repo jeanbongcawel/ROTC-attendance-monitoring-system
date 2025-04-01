@@ -1,11 +1,14 @@
+
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAttendance } from "@/context/AttendanceContext";
+import { useAuth } from "@/context/AuthContext";
 import { CalendarDays, Users, CheckCheck, Clock, UserCheck, UserX } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { CustomProgress } from "@/components/ui/custom-progress";
 
 const Dashboard = () => {
-  const { groups, currentGroupId } = useAttendance();
+  const { groups } = useAttendance();
+  const { user } = useAuth();
 
   // Count total members across all groups
   const totalMembers = Object.values(groups).reduce(
@@ -64,10 +67,14 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-      <p className="text-muted-foreground">
-        Overview of your attendance tracking system.
-      </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome, {user?.name || "Cadet"}! Here's your attendance overview.
+          </p>
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -146,7 +153,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-sm">{stats.presentPercentage}%</div>
                   </div>
-                  <Progress value={stats.presentPercentage} className="h-2 bg-muted" />
+                  <CustomProgress value={stats.presentPercentage} className="h-2 bg-muted" indicatorClassName="bg-green-500" />
                 </div>
                 
                 <div className="space-y-2">
@@ -157,7 +164,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-sm">{stats.latePercentage}%</div>
                   </div>
-                  <Progress value={stats.latePercentage} className="h-2 bg-muted" />
+                  <CustomProgress value={stats.latePercentage} className="h-2 bg-muted" indicatorClassName="bg-amber-500" />
                 </div>
                 
                 <div className="space-y-2">
@@ -168,7 +175,7 @@ const Dashboard = () => {
                     </div>
                     <div className="text-sm">{stats.absentPercentage}%</div>
                   </div>
-                  <Progress value={stats.absentPercentage} className="h-2 bg-muted" />
+                  <CustomProgress value={stats.absentPercentage} className="h-2 bg-muted" indicatorClassName="bg-red-500" />
                 </div>
               </>
             )}

@@ -2,18 +2,27 @@
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Outlet } from "react-router-dom";
+import { LogOut, Menu, X } from "lucide-react";
 import AppSidebar from "./AppSidebar";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
-interface AppLayoutProps {
-  children: React.ReactNode;
-}
-
-const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+const AppLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { user, logout } = useAuth();
+  const { toast } = useToast();
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out",
+    });
   };
 
   return (
@@ -30,6 +39,20 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </Button>
           <h1 className="text-xl font-bold">ROTC Attendance Monitoring System</h1>
         </div>
+        
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium hidden md:inline-block">
+            {user?.name}
+          </span>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleLogout}
+            className="text-primary-foreground hover:bg-primary/90"
+          >
+            <LogOut size={20} />
+          </Button>
+        </div>
       </header>
       
       <div className="flex flex-1 overflow-hidden">
@@ -41,7 +64,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             sidebarOpen ? "md:ml-64" : "ml-0"
           )}
         >
-          {children}
+          <Outlet />
         </main>
       </div>
     </div>
