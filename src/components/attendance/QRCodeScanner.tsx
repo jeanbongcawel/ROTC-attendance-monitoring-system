@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { QrReader } from 'react-qr-reader';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -33,7 +33,7 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onClose }) => {
           if (member && !scannedMembersRef.current.has(memberId)) {
             // Mark attendance as present
             const today = format(new Date(), 'yyyy-MM-dd');
-            markAttendance(currentGroupId, memberId, today, 'present', 'Marked via QR Code', 'qr');
+            markAttendance(currentGroupId, memberId, today, 'present', 'Marked via QR Code', undefined, 'qr');
             
             // Add to scanned members set to prevent duplicate scans
             scannedMembersRef.current.add(memberId);
@@ -53,10 +53,10 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onClose }) => {
     }
   }, [currentGroupId, groups, markAttendance]);
   
-  const handleError = (err: any) => {
+  const handleError = useCallback((err: any) => {
     console.error('QR Code scanner error:', err);
     setError('Error accessing camera. Please ensure you have granted camera permissions.');
-  };
+  }, []);
   
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -90,7 +90,6 @@ const QRCodeScanner: React.FC<QRCodeScannerProps> = ({ onClose }) => {
                 scanDelay={500}
                 containerStyle={{ width: '100%', height: '100%' }}
                 videoStyle={{ width: '100%', height: '100%' }}
-                onError={handleError}
               />
             )}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

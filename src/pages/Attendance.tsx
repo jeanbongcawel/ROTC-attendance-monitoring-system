@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, QrCode, Scan } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, QrCode, Scan, AlertTriangle } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +23,7 @@ const Attendance = () => {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [excuses, setExcuses] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<string>("mark");
   const [activeModal, setActiveModal] = useState<"qr-scanner" | "qr-generator" | "face-scanner" | null>(null);
   const navigate = useNavigate();
@@ -64,7 +64,7 @@ const Attendance = () => {
     setSelectedDate(new Date());
   };
 
-  const handleMarkAttendance = (memberId: string, status: "present" | "absent" | "late") => {
+  const handleMarkAttendance = (memberId: string, status: "present" | "absent" | "late" | "excused") => {
     if (!selectedGroupId) return;
     
     markAttendance(
@@ -72,7 +72,8 @@ const Attendance = () => {
       memberId,
       formattedDate,
       status,
-      notes[memberId]
+      notes[memberId],
+      excuses[memberId]
     );
     
     toast.success(`Attendance marked for ${groups[selectedGroupId].members[memberId].name}`);
@@ -82,6 +83,13 @@ const Attendance = () => {
     setNotes(prev => ({
       ...prev,
       [memberId]: note
+    }));
+  };
+
+  const handleExcuseChange = (memberId: string, excuse: string) => {
+    setExcuses(prev => ({
+      ...prev,
+      [memberId]: excuse
     }));
   };
 
@@ -99,6 +107,13 @@ const Attendance = () => {
     return member?.attendance[formattedDate]?.notes || notes[memberId] || "";
   };
 
+  const getExcuse = (memberId: string) => {
+    if (!selectedGroupId) return "";
+    
+    const member = groups[selectedGroupId]?.members[memberId];
+    return member?.attendance[formattedDate]?.excuse || excuses[memberId] || "";
+  };
+
   const getStatusColor = (status: string | null) => {
     switch (status) {
       case "present":
@@ -107,6 +122,8 @@ const Attendance = () => {
         return "text-red-500 bg-red-50";
       case "late":
         return "text-amber-500 bg-amber-50";
+      case "excused":
+        return "text-blue-500 bg-blue-50";
       default:
         return "text-gray-400 bg-gray-50";
     }
@@ -120,12 +137,13 @@ const Attendance = () => {
         return <XCircle className="h-5 w-5 text-red-500" />;
       case "late":
         return <Clock className="h-5 w-5 text-amber-500" />;
+      case "excused":
+        return <AlertTriangle className="h-5 w-5 text-blue-500" />;
       default:
         return null;
     }
   };
 
-  // Get members with attendance for the selected date
   const getAttendanceForDate = () => {
     if (!selectedGroupId) return [];
     
@@ -137,6 +155,7 @@ const Attendance = () => {
           name: member.name,
           status: attendanceRecord?.status || null,
           notes: attendanceRecord?.notes || "",
+          excuse: attendanceRecord?.excuse || "",
           method: attendanceRecord?.method || "manual"
         };
       })
@@ -276,6 +295,7 @@ const Attendance = () => {
                         <TableHead>Name</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Notes</TableHead>
+                        <TableHead>Excuse</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -287,7 +307,7 @@ const Attendance = () => {
                               {member.name}
                             </TableCell>
                             <TableCell>
-                              <div className="flex space-x-2">
+                              <div className="flex flex-wrap gap-2">
                                 <Button
                                   size="sm"
                                   variant={currentStatus === "present" ? "default" : "outline"}
@@ -318,9 +338,19 @@ const Attendance = () => {
                                 >
                                   Absent
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant={currentStatus === "excused" ? "default" : "outline"}
+                                  className={cn(
+                                    currentStatus === "excused" && "bg-blue-500 hover:bg-blue-600"
+                                  )}
+                                  onClick={() => handleMarkAttendance(member.id, "excused")}
+                                >
+                                  Excused
+                                </Button>
                               </div>
                             </TableCell>
-                            <TableCell className="min-w-[300px]">
+                            <TableCell className="min-w-[200px]">
                               <Textarea
                                 placeholder="Optional notes..."
                                 className="min-h-[60px]"
@@ -328,7 +358,20 @@ const Attendance = () => {
                                 onChange={(e) => handleNoteChange(member.id, e.target.value)}
                                 onBlur={() => {
                                   if (currentStatus) {
-                                    handleMarkAttendance(member.id, currentStatus as "present" | "absent" | "late");
+                                    handleMarkAttendance(member.id, currentStatus as "present" | "absent" | "late" | "excused");
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="min-w-[200px]">
+                              <Textarea
+                                placeholder="Reason for excuse..."
+                                className="min-h-[60px]"
+                                value={getExcuse(member.id)}
+                                onChange={(e) => handleExcuseChange(member.id, e.target.value)}
+                                onBlur={() => {
+                                  if (currentStatus) {
+                                    handleMarkAttendance(member.id, currentStatus as "present" | "absent" | "late" | "excused");
                                   }
                                 }}
                               />
@@ -356,6 +399,7 @@ const Attendance = () => {
                         <TableHead>Status</TableHead>
                         <TableHead>Method</TableHead>
                         <TableHead>Notes</TableHead>
+                        <TableHead>Excuse</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -376,8 +420,11 @@ const Attendance = () => {
                           <TableCell>
                             <span className="capitalize">{record.method || 'manual'}</span>
                           </TableCell>
-                          <TableCell className="max-w-[300px]">
+                          <TableCell className="max-w-[200px]">
                             {record.notes || "-"}
+                          </TableCell>
+                          <TableCell className="max-w-[200px]">
+                            {record.excuse || "-"}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -390,21 +437,18 @@ const Attendance = () => {
         </CardContent>
       </Card>
 
-      {/* QR Code Scanner Modal */}
       <Dialog open={activeModal === "qr-scanner"} onOpenChange={(open) => !open && setActiveModal(null)}>
         <DialogContent className="sm:max-w-md">
           <QRCodeScanner onClose={() => setActiveModal(null)} />
         </DialogContent>
       </Dialog>
 
-      {/* QR Code Generator Modal */}
       <Dialog open={activeModal === "qr-generator"} onOpenChange={(open) => !open && setActiveModal(null)}>
         <DialogContent className="sm:max-w-md">
           <QRCodeGenerator onClose={() => setActiveModal(null)} />
         </DialogContent>
       </Dialog>
 
-      {/* Face Scanner Modal */}
       <Dialog open={activeModal === "face-scanner"} onOpenChange={(open) => !open && setActiveModal(null)}>
         <DialogContent className="sm:max-w-md">
           <FaceScanner onClose={() => setActiveModal(null)} />

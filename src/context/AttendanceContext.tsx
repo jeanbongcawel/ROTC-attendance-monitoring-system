@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -8,12 +7,13 @@ import React, {
 } from "react";
 
 // Define types
-export type AttendanceStatus = "present" | "absent" | "late";
+export type AttendanceStatus = "present" | "absent" | "late" | "excused";
 
 export interface AttendanceRecord {
   status: AttendanceStatus;
   timestamp: string;
   notes?: string;
+  excuse?: string;
   method?: "manual" | "qr" | "face";
 }
 
@@ -73,8 +73,9 @@ interface AttendanceContextType {
     date: string,
     status: AttendanceStatus,
     notes?: string,
+    excuse?: string,
     method?: "manual" | "qr" | "face"
-  ) => void; // Alias for extended recordAttendance
+  ) => void; // Extended function to include excuse
   clearAttendanceData: () => void;
   user: User | null;
   setUser: (user: User | null) => void;
@@ -213,13 +214,14 @@ export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({
     });
   };
 
-  // Enhanced attendance marking function that includes notes and method
+  // Enhanced attendance marking function that includes notes, excuse and method
   const markAttendance = (
     groupId: string,
     memberId: string,
     date: string,
     status: AttendanceStatus,
     notes?: string,
+    excuse?: string,
     method: "manual" | "qr" | "face" = "manual"
   ) => {
     setGroups((prevGroups) => {
@@ -239,6 +241,7 @@ export const AttendanceProvider: React.FC<{ children: ReactNode }> = ({
                     status, 
                     timestamp: new Date().toISOString(),
                     notes,
+                    excuse,
                     method
                   },
                 },
