@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Edit, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { v4 as uuidv4 } from 'uuid';
 
 const Groups = () => {
   const { groups, addGroup, updateGroup, deleteGroup, setCurrentGroup } = useAttendance();
@@ -26,7 +27,14 @@ const Groups = () => {
       return;
     }
 
-    addGroup(newGroupName, newGroupDescription);
+    const newGroup = {
+      id: uuidv4(),
+      name: newGroupName,
+      description: newGroupDescription,
+      members: {}
+    };
+
+    addGroup(newGroup);
     toast.success(`Group "${newGroupName}" created`);
     setNewGroupName("");
     setNewGroupDescription("");
@@ -39,7 +47,10 @@ const Groups = () => {
       return;
     }
 
-    updateGroup(editingGroup.id, editingGroup.name, editingGroup.description);
+    updateGroup(editingGroup.id, {
+      name: editingGroup.name,
+      description: editingGroup.description
+    });
     toast.success(`Group "${editingGroup.name}" updated`);
     setIsEditDialogOpen(false);
   };

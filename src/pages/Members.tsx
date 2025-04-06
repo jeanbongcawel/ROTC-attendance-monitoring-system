@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Edit, Trash2, UserPlus, ArrowLeft, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { v4 as uuidv4 } from 'uuid';
 
 const Members = () => {
   const { groups, currentGroupId, setCurrentGroup, addMember, updateMember, deleteMember } = useAttendance();
@@ -44,7 +45,14 @@ const Members = () => {
       return;
     }
 
-    addMember(selectedGroupId, newMemberName, newMemberEmail);
+    const newMember = {
+      id: uuidv4(),
+      name: newMemberName,
+      email: newMemberEmail,
+      attendance: {}
+    };
+
+    addMember(selectedGroupId, newMember);
     toast.success(`Member "${newMemberName}" added`);
     setNewMemberName("");
     setNewMemberEmail("");
@@ -59,12 +67,16 @@ const Members = () => {
       return;
     }
 
-    updateMember(selectedGroupId, editingMember.id, editingMember.name, editingMember.email);
+    updateMember(selectedGroupId, editingMember.id, {
+      name: editingMember.name,
+      email: editingMember.email
+    });
+    
     toast.success(`Member "${editingMember.name}" updated`);
     setIsEditDialogOpen(false);
   };
 
-  const openEditDialog = (id: string, name: string, email: string) => {
+  const openEditDialog = (id: string, name: string, email: string = "") => {
     setEditingMember({ id, name, email });
     setIsEditDialogOpen(true);
   };
